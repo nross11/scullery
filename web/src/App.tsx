@@ -1,122 +1,82 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { createContext, useContext, useEffect, useState } from 'react';
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { api, type Me } from './api';
+import { Icon, Logo, Spinner, ToastHost } from './components/ui';
+import Login from './pages/Login';
+import RecipeList from './pages/RecipeList';
+import AddRecipe from './pages/AddRecipe';
+import RecipeView from './pages/RecipeView';
+import RecipeEdit from './pages/RecipeEdit';
+import History from './pages/History';
+import Planner from './pages/Planner';
+import Shopping, { ShoppingListView } from './pages/Shopping';
+import Settings from './pages/Settings';
 
-function App() {
-  const [count, setCount] = useState(0)
+const MeContext = createContext<Me | null>(null);
+export const useMe = () => useContext(MeContext)!;
+
+export default function App() {
+  const [me, setMe] = useState<Me | null | 'anon'>(null);
+  const loc = useLocation();
+
+  useEffect(() => {
+    if (loc.pathname.startsWith('/login')) {
+      setMe('anon');
+      return;
+    }
+    api.get<Me>('/me').then(setMe).catch(() => setMe('anon'));
+    // only on first load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (me === null) return <Spinner />;
+  if (me === 'anon') {
+    return (
+      <Routes>
+        <Route path="*" element={<Login />} />
+      </Routes>
+    );
+  }
+
+  const hideChrome = /\/cook$/.test(loc.pathname);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <MeContext.Provider value={me}>
+      <div className="app">
+        <Routes>
+          <Route path="/" element={<RecipeList />} />
+          <Route path="/login" element={<Navigate to="/" />} />
+          <Route path="/add" element={<AddRecipe />} />
+          <Route path="/recipes/:id" element={<RecipeView />} />
+          <Route path="/recipes/:id/cook" element={<RecipeView cookMode />} />
+          <Route path="/recipes/:id/edit" element={<RecipeEdit />} />
+          <Route path="/recipes/:id/history" element={<History />} />
+          <Route path="/plan" element={<Planner />} />
+          <Route path="/shopping" element={<Shopping />} />
+          <Route path="/shopping/:id" element={<ShoppingListView />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+      {!hideChrome && (
+        <nav className="tabbar">
+          <NavLink to="/" end>{Icon.book}Recipes</NavLink>
+          <NavLink to="/add">{Icon.plus}Add</NavLink>
+          <NavLink to="/plan">{Icon.calendar}Plan</NavLink>
+          <NavLink to="/shopping">{Icon.basket}Shopping</NavLink>
+          <NavLink to="/settings">{Icon.gear}Settings</NavLink>
+        </nav>
+      )}
+      <ToastHost />
+    </MeContext.Provider>
+  );
 }
 
-export default App
+export function TopBar({ children }: { children?: React.ReactNode }) {
+  return (
+    <header className="topbar">
+      <NavLink to="/" className="brand"><Logo />Scullery</NavLink>
+      <div className="row">{children}</div>
+    </header>
+  );
+}

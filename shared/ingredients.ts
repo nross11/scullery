@@ -127,9 +127,10 @@ export function formatQuantity(q: number): string {
 /** Return the ingredient line scaled by factor, rebuilding text when we understood it. */
 export function scaleIngredient(ing: Ingredient, factor: number): string {
   if (factor === 1 || ing.quantity === null) return ing.text;
-  let q = formatQuantity(ing.quantity * factor);
-  if (ing.quantityMax) q += `–${formatQuantity(ing.quantityMax * factor)}`;
-  const parts = [q, ing.unit, ing.name].filter(Boolean).join(' ');
+  const amt = tidyAmount(ing.quantity * factor, ing.unit);
+  let q = formatQuantity(amt.q);
+  if (ing.quantityMax) q += `–${formatQuantity(tidyAmount(ing.quantityMax * factor, ing.unit).q)}`;
+  const parts = [q, amt.unit, ing.name].filter(Boolean).join(' ');
   return ing.note ? `${parts}, ${ing.note}` : parts;
 }
 
@@ -163,5 +164,18 @@ export function fromBase(q: number, unit: string | null, preferred: string | nul
   if (preferred && FAMILIES[preferred] && unit === FAMILIES[preferred][0]) {
     return { q: q / FAMILIES[preferred][1], unit: preferred };
   }
+  return { q, unit };
+}
+
+const PLURALS: Record<string, string> = {
+  cup: 'cups', clove: 'cloves', can: 'cans', stick: 'sticks', bunch: 'bunches', slice: 'slices', piece: 'pieces',
+  package: 'packages', handful: 'handfuls', sprig: 'sprigs', pinch: 'pinches', quart: 'quarts', pint: 'pints',
+};
+
+/** "1000 ml" -> "1 l", "2 clove" -> "2 cloves". */
+export function tidyAmount(q: number, unit: string | null): { q: number; unit: string | null } {
+  if (unit === 'ml' && q >= 1000) return { q: q / 1000, unit: 'l' };
+  if (unit === 'g' && q >= 1000) return { q: q / 1000, unit: 'kg' };
+  if (unit && q > 1 && PLURALS[unit]) return { q, unit: PLURALS[unit] };
   return { q, unit };
 }

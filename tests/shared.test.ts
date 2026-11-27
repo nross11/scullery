@@ -20,7 +20,8 @@ describe('parseIngredient', () => {
 
 describe('scaling', () => {
   it('scales with nice fractions', () => {
-    expect(scaleIngredient(parseIngredient('1 cup milk'), 1.5)).toBe('1½ cup milk');
+    expect(scaleIngredient(parseIngredient('1 cup milk'), 1.5)).toBe('1½ cups milk');
+    expect(scaleIngredient(parseIngredient('500ml stock'), 2)).toBe('1 l stock');
     expect(scaleIngredient(parseIngredient('3 eggs'), 1 / 3)).toBe('1 eggs');
     expect(formatQuantity(0.333)).toBe('⅓');
   });
@@ -72,5 +73,13 @@ describe('shopping list', () => {
   it('knows black pepper is pantry', () => {
     expect(guessAisle('black pepper')).toBe('Pantry');
     expect(guessAisle('red bell pepper')).toBe('Produce');
+  });
+});
+
+describe('fixes', () => {
+  it('puts stock in pantry and titles social posts', () => {
+    expect(guessAisle('vegetable stock')).toBe('Pantry');
+    expect(importFromHtml('', 'https://www.tiktok.com/@x/video/1').draft.title).toBe('Recipe from Tiktok');
+    expect(importFromHtml('', 'https://www.tiktok.com/@x/video/1', 'Crispy gnocchi\n1 bag gnocchi').draft.title).toBe('Crispy gnocchi');
   });
 });

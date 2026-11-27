@@ -1,4 +1,4 @@
-import { fromBase, normalizeName, toBase } from './ingredients';
+import { fromBase, normalizeName, tidyAmount, toBase } from './ingredients';
 import type { Ingredient } from './recipe';
 
 export interface PlannedIngredient {
@@ -28,7 +28,7 @@ const AISLES: [string, RegExp][] = [
 export function guessAisle(name: string): string {
   const n = name.toLowerCase();
   // Check "black pepper"/"salt" before produce's "pepper"
-  if (/\b(black pepper|white pepper|peppercorn|salt)\b/.test(n)) return 'Pantry';
+  if (/\b(black pepper|white pepper|peppercorn|salt|stock|broth|oil|vinegar|tinned|canned|dried)\b/.test(n)) return 'Pantry';
   for (const [aisle, re] of AISLES) if (re.test(n)) return aisle;
   return 'Other';
 }
@@ -68,7 +68,8 @@ export function buildShoppingList(items: PlannedIngredient[]): ShoppingLine[] {
     let quantity: number | null = null;
     let unit: string | null = line.unit;
     if (line.base !== null) {
-      const disp = fromBase(line.base, line.unit, line.preferred);
+      const base = fromBase(line.base, line.unit, line.preferred);
+      const disp = tidyAmount(base.q, base.unit);
       quantity = Math.round(disp.q * 100) / 100;
       unit = disp.unit;
     }
