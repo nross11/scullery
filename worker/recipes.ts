@@ -147,8 +147,40 @@ export async function importUrl(env: Env, url?: string | null, text?: string | n
       pageText = [result.draft.title, result.draft.body.rawText].filter(Boolean).join('\n') || null;
     }
   }
+  if (kind === 'instagram' || kind === 'tiktok') {
+    const extra = await socialCaption(url, kind);
+    if (extra) pageText = [pageText, extra].filter(Boolean).join('\n\n');
+  }
   if (!pageText && !text && !images.length) return result;
   return withAi(env, result, { url, sourceKind: kind, pageText, pastedText: text, images });
+}
+
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+
+/**
+ * Instagram and TikTok pages need a login to show the caption, so try the public routes they
+ * offer for embedding posts. Best effort: either may stop working or block us.
+ */
+async function socialCaption(url: string, kind: 'instagram' | 'tiktok'): Promise<string | null> {
+  try {
+    if (kind === 'instagram') {
+      const code = url.match(/instagram\.com\/(?:[^/]+\/)?(?:p|reel|reels|tv)\/([A-Za-z0-9_-]+)/)?.[1];
+      if (!code) return null;
+      const res = await fetch(`https://www.instagram.com/p/${code}/embed/captioned/`, { headers: { 'user-agent': BROWSER_UA, accept: 'text/html' } });
+      console.log('instagram embed', res.status);
+      if (!res.ok) return null;
+      const text = htmlToText(await res.text(), 20_000);
+      return text ? `Instagram post (embed view):\n${text}` : null;
+    }
+    const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { headers: { 'user-agent': BROWSER_UA } });
+    console.log('tiktok oembed', res.status);
+    if (!res.ok) return null;
+    const j = await res.json<{ title?: string; author_name?: string }>();
+    return j.title ? `TikTok caption${j.author_name ? ` by ${j.author_name}` : ''}:\n${j.title}` : null;
+  } catch (e) {
+    console.log('social caption failed', String(e));
+    return null;
+  }
 }
 
 async function withAi(env: Env, fallback: ImportOutcome, input: Parameters<typeof aiImport>[1]): Promise<ImportOutcome> {
