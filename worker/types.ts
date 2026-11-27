@@ -5,6 +5,7 @@ export interface Env {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   ALLOWED_EMAILS: string;
+  ANTHROPIC_API_KEY?: string; // secret; Claude features are off without it
 }
 
 export interface User {

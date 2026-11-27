@@ -80,6 +80,22 @@ Then in the **Shortcuts** app, tap **+** and build this:
 
 Now in Safari, YouTube, Instagram or TikTok: tap **Share → Save to Scullery**. Website recipes open ready to cook. Video links open in the editor so you can paste in the caption and tidy up.
 
+### 4. Claude (optional AI features)
+
+With an Anthropic API key from console.anthropic.com, Scullery can:
+
+- **Import from anything.** When a page has no structured recipe (or it's a YouTube video, Instagram/TikTok caption, pasted text or screenshots), Claude writes the recipe and you check it before using it. Pages with schema.org recipe data are still imported directly, without Claude.
+- **Make it healthier.** Claude proposes swaps as a new version; nothing changes unless you accept it.
+- **Ask Claude** about the recipe you're viewing.
+
+Set the key as a secret (it prompts for the value; never commit it):
+
+```sh
+npx wrangler secret put ANTHROPIC_API_KEY
+```
+
+Without the secret, these buttons are hidden and import works as before. The model is set in `worker/ai.ts`. Each call logs its token usage (`npx wrangler tail`). Setting a monthly spend limit in the Anthropic Console is a good idea.
+
 ## Development
 
 ```sh

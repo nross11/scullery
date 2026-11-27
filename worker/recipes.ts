@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import type { AppEnv, Env } from './types';
 import { id, normTag, now } from './util';
 import { importFromHtml } from '../shared/importer';
+import { htmlToText, youtubeDescription } from '../shared/aiRecipe';
+import { AiError, aiChat, aiEnabled, aiHealthier, aiImport, type ChatTurn, type ImageInput } from './ai';
 import { emptyBody, sourceKindOf, type RecipeBody, type RecipeDraft } from '../shared/recipe';
 
 export const recipeRoutes = new Hono<AppEnv>();
@@ -75,16 +77,40 @@ recipeRoutes.get('/tags', async (c) => {
   return c.json(results);
 });
 
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+function cleanImages(raw: unknown): ImageInput[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((i): i is ImageInput => !!i && IMAGE_TYPES.has(i.mediaType) && typeof i.data === 'string' && i.data.length < 7_000_000)
+    .slice(0, 6);
+}
+
 recipeRoutes.post('/import', async (c) => {
-  const { url, text } = await c.req.json<{ url?: string; text?: string }>();
-  return c.json(await importUrl(url, text));
+  const { url, text, images } = await c.req.json<{ url?: string; text?: string; images?: unknown }>();
+  return c.json(await importUrl(c.env, url, text, cleanImages(images)));
 });
 
-export async function importUrl(url?: string | null, text?: string | null) {
+export interface ImportOutcome {
+  structured: boolean;
+  fetched: boolean;
+  draft: RecipeDraft;
+  /** true when Claude wrote the draft */
+  ai?: boolean;
+  /** what Claude had to estimate */
+  guessed?: string[];
+  /** why Claude couldn't help, when it was asked and failed */
+  aiNote?: string;
+}
+
+export async function importUrl(env: Env, url?: string | null, text?: string | null, images: ImageInput[] = []): Promise<ImportOutcome> {
+  url = url?.trim() || null;
+  text = text?.trim() || null;
   if (!url) {
     const body = emptyBody();
-    body.rawText = text ?? null;
-    return { structured: false, fetched: false, draft: { title: 'Untitled recipe', body, sourceUrl: null, sourceKind: 'manual', imageUrl: null, tags: [] } };
+    body.rawText = text;
+    const manual: ImportOutcome = { structured: false, fetched: false, draft: { title: 'Untitled recipe', body, sourceUrl: null, sourceKind: 'manual', imageUrl: null, tags: [] } };
+    return text || images.length ? withAi(env, manual, { url: null, sourceKind: 'manual', pastedText: text, images }) : manual;
   }
   let html = '';
   let fetched = false;
@@ -105,8 +131,42 @@ export async function importUrl(url?: string | null, text?: string | null) {
   } catch {
     /* site unreachable: fall through to a manual draft */
   }
-  const result = importFromHtml(html, url, text);
-  return { ...result, fetched };
+  const result: ImportOutcome = { ...importFromHtml(html, url, text), fetched };
+  // A proper schema.org recipe is free and exact, so only call Claude when there isn't one.
+  if (result.structured) return result;
+  const kind = result.draft.sourceKind;
+  let pageText: string | null = null;
+  if (html) {
+    if (kind === 'youtube') {
+      const yt = youtubeDescription(html);
+      pageText = [yt.title && `Video title: ${yt.title}`, yt.channel && `Channel: ${yt.channel}`, yt.description && `Description:\n${yt.description}`].filter(Boolean).join('\n') || null;
+    } else if (kind === 'web') {
+      pageText = htmlToText(html) || null;
+    } else {
+      // Instagram/TikTok rarely give us more than the caption preview in their meta tags.
+      pageText = [result.draft.title, result.draft.body.rawText].filter(Boolean).join('\n') || null;
+    }
+  }
+  if (!pageText && !text && !images.length) return result;
+  return withAi(env, result, { url, sourceKind: kind, pageText, pastedText: text, images });
+}
+
+async function withAi(env: Env, fallback: ImportOutcome, input: Parameters<typeof aiImport>[1]): Promise<ImportOutcome> {
+  if (!aiEnabled(env)) return fallback;
+  try {
+    const out = await aiImport(env, input);
+    if ('problem' in out) return { ...fallback, aiNote: out.problem };
+    return {
+      structured: false,
+      fetched: fallback.fetched,
+      ai: true,
+      guessed: out.guessed,
+      draft: { ...out.draft, imageUrl: fallback.draft.imageUrl, body: { ...out.draft.body, rawText: fallback.draft.body.rawText ?? null } },
+    };
+  } catch (e) {
+    if (e instanceof AiError) return { ...fallback, aiNote: e.message };
+    throw e;
+  }
 }
 
 recipeRoutes.post('/', async (c) => {
@@ -221,4 +281,31 @@ recipeRoutes.post('/:id/versions/:vid/restore', async (c) => {
     c.env.DB.prepare('UPDATE recipes SET current_version_id = ?, updated_at = ? WHERE id = ?').bind(vid, now(), r.id),
   ]);
   return c.json({ ok: true, versionNo: r.version_no + 1 });
+});
+
+/** Ask Claude for a healthier version. Nothing is saved: the app shows it and saves it as a new version if accepted. */
+recipeRoutes.post('/:id/ai/healthier', async (c) => {
+  const user = c.get('user');
+  const r = await loadRecipe(c.env, user.household_id, c.req.param('id'));
+  if (!r) return c.json({ error: 'not found' }, 404);
+  const { goal } = await c.req.json<{ goal?: string }>().catch(() => ({ goal: undefined }));
+  try {
+    return c.json({ basedOnVersion: r.version_no, ...(await aiHealthier(c.env, r.title, JSON.parse(r.body), goal)) });
+  } catch (e) {
+    if (e instanceof AiError) return c.json({ error: e.message }, e.status as 400);
+    throw e;
+  }
+});
+
+recipeRoutes.post('/:id/ai/chat', async (c) => {
+  const user = c.get('user');
+  const r = await loadRecipe(c.env, user.household_id, c.req.param('id'));
+  if (!r) return c.json({ error: 'not found' }, 404);
+  const { messages } = await c.req.json<{ messages?: ChatTurn[] }>();
+  try {
+    return c.json({ reply: await aiChat(c.env, r.title, JSON.parse(r.body), Array.isArray(messages) ? messages : []) });
+  } catch (e) {
+    if (e instanceof AiError) return c.json({ error: e.message }, e.status as 400);
+    throw e;
+  }
 });

@@ -4,6 +4,7 @@ import { authRoutes, createApiToken, requireUser } from './auth';
 import { createRecipe, importUrl, recipeRoutes } from './recipes';
 import { cookLogRoutes, planRoutes, shoppingRoutes } from './planning';
 import { id } from './util';
+import { aiEnabled } from './ai';
 
 const app = new Hono<AppEnv>().basePath('/api');
 
@@ -17,7 +18,7 @@ app.use('/*', async (c, next) => {
 app.get('/me', async (c) => {
   const user = c.get('user');
   const { results: members } = await c.env.DB.prepare('SELECT name, email, avatar_url FROM users WHERE household_id = ?').bind(user.household_id).all();
-  return c.json({ ...user, members });
+  return c.json({ ...user, members, ai: aiEnabled(c.env) });
 });
 
 // Personal tokens for the iOS Shortcut.
@@ -61,10 +62,10 @@ app.post('/share', async (c) => {
     }
   }
   if (!url && !text) return c.json({ error: 'nothing shared' }, 400);
-  const result = await importUrl(url, text);
+  const result = await importUrl(c.env, url, text);
   const rid = await createRecipe(c.env, c.get('user'), { ...result.draft, tags: result.draft.tags ?? [] } as any);
-  const link = new URL(`/recipes/${rid}${result.structured ? '' : '?tidy=1'}`, c.req.url).toString();
-  return c.json({ id: rid, url: link, structured: result.structured, title: result.draft.title });
+  const link = new URL(result.structured ? `/recipes/${rid}` : `/recipes/${rid}/edit?${result.ai ? 'ai=1' : 'tidy=1'}`, c.req.url).toString();
+  return c.json({ id: rid, url: link, structured: result.structured, ai: !!result.ai, title: result.draft.title });
 });
 
 // Photos stored in R2, served back through the Worker.
