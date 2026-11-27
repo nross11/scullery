@@ -9,7 +9,7 @@
     "run_worker_first": ["/api/*"]
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "scullery", "database_id": "REPLACE_WITH_D1_ID", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "scullery", "database_id": "057a0627-6e20-479b-a897-c4ac6cdef457", "migrations_dir": "migrations" }
   ],
   "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "scullery-photos" }],
   "vars": {
