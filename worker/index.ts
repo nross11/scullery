@@ -69,6 +69,7 @@ app.post('/share', async (c) => {
 
 // Photos stored in R2, served back through the Worker.
 app.post('/photos', async (c) => {
+  if (!c.env.PHOTOS) return c.json({ error: 'Photo uploads are not switched on yet. Paste an image link instead.' }, 503);
   const type = c.req.header('content-type') || 'image/jpeg';
   if (!type.startsWith('image/')) return c.json({ error: 'not an image' }, 400);
   const buf = await c.req.arrayBuffer();
@@ -79,6 +80,7 @@ app.post('/photos', async (c) => {
 });
 app.get('/photos/:hh/:key', async (c) => {
   if (c.req.param('hh') !== c.get('user').household_id) return c.json({ error: 'not found' }, 404);
+  if (!c.env.PHOTOS) return c.json({ error: 'not found' }, 404);
   const obj = await c.env.PHOTOS.get(`${c.req.param('hh')}/${c.req.param('key')}`);
   if (!obj) return c.json({ error: 'not found' }, 404);
   return new Response(obj.body, {

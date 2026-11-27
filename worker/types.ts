@@ -1,6 +1,6 @@
 export interface Env {
   DB: D1Database;
-  PHOTOS: R2Bucket;
+  PHOTOS?: R2Bucket; // optional: photo uploads are off until R2 is enabled
   ASSETS: Fetcher;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;

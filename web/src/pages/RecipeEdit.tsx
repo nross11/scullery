@@ -80,6 +80,8 @@ export default function RecipeEdit() {
     try {
       const url = await api.upload(file);
       setF((cur) => (cur ? { ...cur, imageUrl: url } : cur));
+    } catch (e) {
+      toast((e as Error).message);
     } finally {
       setBusy(false);
     }

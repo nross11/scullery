@@ -34,7 +34,11 @@ export const api = {
   del: <T>(p: string) => req<T>('DELETE', p),
   async upload(file: File): Promise<string> {
     const res = await fetch('/api/photos', { method: 'POST', headers: { 'content-type': file.type }, body: file });
-    if (!res.ok) throw new ApiError(res.status, 'Upload failed');
+    if (!res.ok) {
+      let msg = 'Upload failed';
+      try { msg = ((await res.json()) as { error?: string }).error ?? msg; } catch { /* not json */ }
+      throw new ApiError(res.status, msg);
+    }
     return ((await res.json()) as { url: string }).url;
   },
 };
