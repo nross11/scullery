@@ -22,11 +22,19 @@ function redirectUri(c: Context): string {
   return new URL('/api/auth/callback', c.req.url).toString();
 }
 
+/** Gmail ignores dots and "+tags" in the name part, so "a.b@gmail.com" and "ab@gmail.com" are the same account. */
+export function canonicalEmail(email: string): string {
+  const [name, domain] = email.trim().toLowerCase().split('@');
+  if (domain === 'gmail.com' || domain === 'googlemail.com') return `${name.split('+')[0].replace(/\./g, '')}@gmail.com`;
+  return `${name}@${domain}`;
+}
+
 /** Work out which household an email belongs to, or null if not allowed. */
-async function householdFor(env: Env, email: string): Promise<string | null> {
+async function householdFor(env: Env, rawEmail: string): Promise<string | null> {
+  const email = canonicalEmail(rawEmail);
   const row = await env.DB.prepare('SELECT household_id FROM allowed_emails WHERE email = ?').bind(email).first<{ household_id: string }>();
   if (row) return row.household_id;
-  const envList = (env.ALLOWED_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+  const envList = (env.ALLOWED_EMAILS || '').split(',').map((e) => e.trim()).filter(Boolean).map(canonicalEmail);
   if (!envList.includes(email)) return null;
   // Everyone listed in ALLOWED_EMAILS shares the first household (created on first sign-in).
   let hh = await env.DB.prepare('SELECT id FROM households ORDER BY created_at LIMIT 1').first<{ id: string }>();
