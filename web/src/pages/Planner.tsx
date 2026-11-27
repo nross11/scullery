@@ -4,10 +4,9 @@ import { api, type PlanEntry, type RecipeSummary } from '../api';
 import { Sheet, Spinner, Thumb, isoDate, toast, useLoad } from '../components/ui';
 import { TopBar } from '../App';
 
-function startOfWeek(d: Date): Date {
-  const x = new Date(d);
-  const day = (x.getDay() + 6) % 7; // Monday start
-  x.setDate(x.getDate() - day);
+/** The plan is a rolling 7 days starting today. */
+function startOfToday(): Date {
+  const x = new Date();
   x.setHours(12, 0, 0, 0);
   return x;
 }
@@ -16,7 +15,7 @@ const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'other'];
 
 export default function Planner() {
   const nav = useNavigate();
-  const [week, setWeek] = useState(() => startOfWeek(new Date()));
+  const [week, setWeek] = useState(startOfToday);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(week); d.setDate(d.getDate() + i); return d; }), [week]);
   const from = isoDate(days[0]);
   const to = isoDate(days[6]);
@@ -30,7 +29,7 @@ export default function Planner() {
   async function makeList() {
     setBusy(true);
     const { id } = await api.post<{ id: string }>('/shopping/generate', {
-      from, to, name: `Week of ${days[0].toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`,
+      from, to, name: `${days[0].toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${days[6].toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`,
     });
     nav(`/shopping/${id}`);
   }
@@ -43,6 +42,11 @@ export default function Planner() {
         <h2 style={{ margin: 0 }}>{days[0].toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – {days[6].toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</h2>
         <button className="small" onClick={() => shift(1)} aria-label="Next week">→</button>
       </div>
+      {from !== today && (
+        <div style={{ textAlign: 'center', marginTop: -6, marginBottom: 10 }}>
+          <button className="ghost small" onClick={() => setWeek(startOfToday())}>Back to today</button>
+        </div>
+      )}
       {!data && <Spinner />}
       {data && days.map((d) => {
         const iso = isoDate(d);
@@ -68,7 +72,7 @@ export default function Planner() {
       })}
       {data && (
         <button className="primary" style={{ width: '100%', marginTop: 8 }} disabled={busy || !data.some((p) => p.recipe_id)} onClick={makeList}>
-          Make shopping list for this week
+          Make shopping list for these 7 days
         </button>
       )}
       {adding && <PickRecipeSheet date={adding} onClose={() => setAdding(null)} onAdded={() => { setAdding(null); reload(); }} />}
