@@ -13,7 +13,7 @@
   ],
   "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "scullery-photos" }],
   "vars": {
-    "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID"
+    "GOOGLE_CLIENT_ID": "299239674816-jrljfbq92rdmo91qf8g7curs0imcbplm.apps.googleusercontent.com"
   }
   // Secrets (set with `npx wrangler secret put <NAME>`), kept out of the repo:
   //   GOOGLE_CLIENT_SECRET
