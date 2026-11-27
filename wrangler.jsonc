@@ -13,8 +13,9 @@
   ],
   "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "scullery-photos" }],
   "vars": {
-    "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID",
-    "ALLOWED_EMAILS": "REPLACE_WITH_COMMA_SEPARATED_EMAILS"
+    "GOOGLE_CLIENT_ID": "REPLACE_WITH_GOOGLE_CLIENT_ID"
   }
-  // Secret (set with `npx wrangler secret put GOOGLE_CLIENT_SECRET`): GOOGLE_CLIENT_SECRET
+  // Secrets (set with `npx wrangler secret put <NAME>`), kept out of the repo:
+  //   GOOGLE_CLIENT_SECRET
+  //   ALLOWED_EMAILS  e.g. you@gmail.com,partner@gmail.com
 }

@@ -20,7 +20,7 @@ export default function Settings() {
             <div><strong>{m.name ?? m.email}</strong><div className="small muted">{m.email}</div></div>
           </div>
         ))}
-        <p className="hint">To add someone, add their Google email to ALLOWED_EMAILS in the Cloudflare settings (see the README).</p>
+        <p className="hint">To add someone, add their Google email to the ALLOWED_EMAILS secret in Cloudflare (see the README).</p>
       </div>
 
       <div className="card stack section">

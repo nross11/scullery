@@ -34,13 +34,10 @@ npx wrangler r2 bucket create scullery-photos
 
 > R2 may ask you to enable it on your account first, which needs a payment card on file even on the free tier (this is my understanding; check the Cloudflare dashboard).
 
-In `wrangler.jsonc`:
-- paste the `database_id` in place of `REPLACE_WITH_D1_ID`
-- set `ALLOWED_EMAILS` to your Google emails, comma separated, e.g. `"you@gmail.com,partner@gmail.com"`
-
-Then:
+In `wrangler.jsonc`, paste the `database_id` in place of `REPLACE_WITH_D1_ID`. Then:
 
 ```sh
+npx wrangler secret put ALLOWED_EMAILS      # your Google emails, comma separated
 npm run db:migrate          # creates the tables
 npm run deploy              # builds the app and deploys it
 ```
@@ -62,7 +59,7 @@ npm run deploy
 
 Open your Scullery URL on each iPhone in Safari, sign in, then tap **Share → Add to Home Screen**.
 
-**Adding someone later:** add their email to `ALLOWED_EMAILS` (and as a Google test user) and redeploy. Everyone on the list shares the same recipes.
+**Adding someone later:** run `npx wrangler secret put ALLOWED_EMAILS` again with their email added (and add them as a Google test user). Everyone on the list shares the same recipes.
 
 ### 3. iPhone share sheet Shortcut
 
