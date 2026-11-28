@@ -14,8 +14,22 @@
   "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "scullery-photos" }],
   "vars": {
     "GOOGLE_CLIENT_ID": "299239674816-jrljfbq92rdmo91qf8g7curs0imcbplm.apps.googleusercontent.com"
+  },
+  // Branch previews (`npx wrangler preview --name review`), served at
+  // https://review-scullery.nross11.workers.dev. They share the production
+  // database and photo bucket, so anything saved on a preview is real data.
+  "previews": {
+    "d1_databases": [
+      { "binding": "DB", "database_name": "scullery", "database_id": "057a0627-6e20-479b-a897-c4ac6cdef457", "migrations_dir": "migrations" }
+    ],
+    "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "scullery-photos" }],
+    "vars": {
+      "GOOGLE_CLIENT_ID": "299239674816-jrljfbq92rdmo91qf8g7curs0imcbplm.apps.googleusercontent.com"
+    }
   }
-  // Secrets (set with `npx wrangler secret put <NAME>`), kept out of the repo:
+  // Secrets, kept out of the repo. Production: `npx wrangler secret put <NAME>`.
+  // Previews: `npx wrangler preview base-config secret put <NAME>`.
   //   GOOGLE_CLIENT_SECRET
   //   ALLOWED_EMAILS  e.g. you@gmail.com,partner@gmail.com
+  //   ANTHROPIC_API_KEY
 }

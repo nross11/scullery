@@ -25,10 +25,10 @@ export default function Settings() {
 
       <div className="card stack section">
         <h2>iPhone share sheet</h2>
-        <p className="small">The Scullery Shortcut lets you share a link from Safari, YouTube, Instagram or TikTok straight into Scullery. It needs a key so it can save recipes as you.</p>
+        <p className="small">The Scullery Shortcuts let you share a post, link or screenshot from Instagram, TikTok, YouTube or Safari straight into Scullery. They need a key so they can save recipes as you.</p>
         <ol className="small" style={{ paddingLeft: 20 }}>
           <li>Tap <strong>Create a key</strong> below and copy it.</li>
-          <li>Install the Scullery Shortcut using the link in the README, and paste the key when it asks.</li>
+          <li>Build the two Shortcuts (Save to Scullery and Screenshot to Scullery) following the steps you were sent, and paste in the key.</li>
           <li>In any app, tap Share, then <strong>Save to Scullery</strong>.</li>
         </ol>
         <button className="primary" onClick={async () => { const { token } = await api.post<{ token: string }>('/tokens', { label: 'iPhone Shortcut' }); setNewToken(token); tokens.reload(); }}>Create a key</button>

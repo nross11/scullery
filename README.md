@@ -61,24 +61,58 @@ Open your Scullery URL on each iPhone in Safari, sign in, then tap **Share → A
 
 **Adding someone later:** run `npx wrangler secret put ALLOWED_EMAILS` again with their email added (and add them as a Google test user). Everyone on the list shares the same recipes.
 
-### 3. iPhone share sheet Shortcut
+### 3. iPhone share sheet Shortcuts
 
-iOS doesn't let web apps appear in the share sheet, so a small Shortcut sends links to Scullery instead.
+iOS doesn't let web apps appear in the share sheet, so two small Shortcuts send things to Scullery instead. One is for links and text, and one is for screenshots. With the Claude key set, the recipe is written for you and saved. You get a notification and don't need to open the app.
 
 First, in Scullery go to **Settings → Create a key** and copy the key.
 
-Then in the **Shortcuts** app, tap **+** and build this:
+**Shortcut 1: Save to Scullery** (links and text)
 
-1. Tap the **ⓘ** (details) button, turn on **Show in Share Sheet**, and set it to receive **URLs** and **Text**. Name the shortcut **Save to Scullery**.
+In the **Shortcuts** app, tap **+**, name it **Save to Scullery**, and add:
+
+1. Tap the **ⓘ** button at the bottom and turn on **Show in Share Sheet**. Back in the editor, tap the blue **Images and 18 more** at the top and leave only **URLs** and **Text** ticked.
 2. Add **Get Contents of URL**:
    - URL: `https://<your Scullery URL>/api/share`
-   - Method: **POST**
-   - Headers: `Authorization` = `Bearer <your key>`
-   - Request Body: **JSON**, with one field `text` (Text) set to the **Shortcut Input** variable
-3. Add **Get Dictionary Value**: get the value for `url` in **Contents of URL**.
-4. Add **Open URLs** with that **Dictionary Value**.
+   - Tap **Show More**. Set Method to **POST**.
+   - Headers: add `Authorization`, with the value `Bearer <your key>` (the word Bearer, a space, then the key).
+   - Request Body: **JSON**. Add a **Text** field named `text`, and set its value to the **Shortcut Input** variable.
+3. Add **Get Dictionary Value**: get the **Value** for key `message` in **Contents of URL**.
+4. Add **Show Notification** with the **Dictionary Value**.
 
-Now in Safari, YouTube, Instagram or TikTok: tap **Share → Save to Scullery**. Website recipes open ready to cook. Video links open in the editor so you can paste in the caption and tidy up.
+**Shortcut 2: Screenshot to Scullery** (for posts whose caption Scullery can't read)
+
+The same steps with three differences: in step 1, leave only **Images** ticked. In step 2, set Request Body to **Form**, add a **File** field named `image`, and set it to **Shortcut Input**. Name it **Screenshot to Scullery**.
+
+**Using them:** in Instagram, TikTok, YouTube or Safari, tap **Share** (for Instagram, the paper plane, then **Share to…** or **More**), then **Save to Scullery**. Wait 10 to 30 seconds for the notification. If it says it couldn't read the recipe, take a screenshot of the caption, tap the screenshot thumbnail, tap **Share**, then **Screenshot to Scullery**.
+
+### 4. Claude (optional AI features)
+
+With an Anthropic API key from console.anthropic.com, Scullery can:
+
+- **Import from anything.** When a page has no structured recipe (or it's a YouTube video, Instagram/TikTok caption, pasted text or screenshots), Claude writes the recipe and you check it before using it. Pages with schema.org recipe data are still imported directly, without Claude.
+- **Make it healthier.** Claude proposes swaps as a new version; nothing changes unless you accept it.
+- **Ask Claude** about the recipe you're viewing.
+
+Set the key as a secret (it prompts for the value; never commit it):
+
+```sh
+npx wrangler secret put ANTHROPIC_API_KEY
+```
+
+Without the secret, these buttons are hidden and import works as before. The model is set in `worker/ai.ts`. Each call logs its token usage (`npx wrangler tail`). Setting a monthly spend limit in the Anthropic Console is a good idea.
+
+## Deploying
+
+Cloudflare Workers Builds builds and deploys from GitHub. Nothing deploys from a laptop.
+
+- **Push to `main`:** production. Runs `npm run build`, then `npx wrangler deploy`, to https://scullery.nross11.workers.dev
+- **Push to any other branch:** preview. Runs `npm run build`, then `npx wrangler preview --name review`, to https://review-scullery.nross11.workers.dev. There is one shared preview address, so the latest push wins.
+- Previews use the production database and photo bucket. Anything saved on a preview is real data.
+- Migrations don't run on deploy. Apply them with `npm run db:migrate`.
+- The repo is public. Never commit personal data, secrets or `.dev.vars`.
+
+Every change goes through a pull request: the preview build shows as a check on the PR, someone tries the preview, and merging to `main` ships it.
 
 ## Development
 
