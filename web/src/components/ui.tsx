@@ -1,14 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 export function Logo({ size = 28 }: { size?: number }) {
-  // A little copper pot.
+  // A pot drawn in neon: lime body, hot-pink steam.
   return (
-    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true">
-      <path d="M12 26h40v14c0 9-7 14-14 14H26c-7 0-14-5-14-14V26z" fill="#b8613c" />
-      <path d="M12 26h40v5H12z" fill="#8f4a2d" />
-      <path d="M52 30h6a3 3 0 0 1 0 6h-6" fill="none" stroke="#8f4a2d" strokeWidth="3" strokeLinecap="round" />
-      <path d="M6 30h6M6 36h6" stroke="#8f4a2d" strokeWidth="3" strokeLinecap="round" />
-      <path d="M24 20c0-4 4-4 4-8M32 20c0-4 4-4 4-8M40 20c0-4 4-4 4-8" fill="none" stroke="#4d6b46" strokeWidth="2.5" strokeLinecap="round" opacity=".7" />
+    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 28h40v12c0 8-6 13-13 13H25c-7 0-13-5-13-13V28z" stroke="#c6ff3d" strokeWidth="3.5" />
+      <path d="M8 28h48" stroke="#c6ff3d" strokeWidth="3.5" />
+      <path d="M52 33h5M7 33h5" stroke="#c6ff3d" strokeWidth="3.5" />
+      <path d="M24 21c0-4 4-4 4-8M32 21c0-4 4-4 4-8M40 21c0-4 4-4 4-8" stroke="#ff3d81" strokeWidth="3" />
     </svg>
   );
 }

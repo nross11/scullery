@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { api, type Me } from './api';
-import { Icon, Logo, Spinner, ToastHost } from './components/ui';
+import { Icon, Spinner, ToastHost } from './components/ui';
 import Login from './pages/Login';
 import RecipeList from './pages/RecipeList';
 import AddRecipe from './pages/AddRecipe';
@@ -60,11 +60,11 @@ export default function App() {
       </div>
       {!hideChrome && (
         <nav className="tabbar">
-          <NavLink to="/" end>{Icon.book}Recipes</NavLink>
-          <NavLink to="/add">{Icon.plus}Add</NavLink>
-          <NavLink to="/plan">{Icon.calendar}Plan</NavLink>
-          <NavLink to="/shopping">{Icon.basket}Shopping</NavLink>
-          <NavLink to="/settings">{Icon.gear}Settings</NavLink>
+          <NavLink to="/" end aria-label="Recipes">{Icon.book}<span className="label">Recipes</span></NavLink>
+          <NavLink to="/add" aria-label="Add">{Icon.plus}<span className="label">Add</span></NavLink>
+          <NavLink to="/plan" aria-label="Plan">{Icon.calendar}<span className="label">Plan</span></NavLink>
+          <NavLink to="/shopping" aria-label="Shopping">{Icon.basket}<span className="label">Shopping</span></NavLink>
+          <NavLink to="/settings" aria-label="Settings">{Icon.gear}<span className="label">Settings</span></NavLink>
         </nav>
       )}
       <ToastHost />
@@ -75,7 +75,7 @@ export default function App() {
 export function TopBar({ children }: { children?: React.ReactNode }) {
   return (
     <header className="topbar">
-      <NavLink to="/" className="brand"><Logo />Scullery</NavLink>
+      <NavLink to="/" className="brand">Scullery<span className="dot">.</span></NavLink>
       <div className="row">{children}</div>
     </header>
   );
