@@ -102,6 +102,18 @@ npx wrangler secret put ANTHROPIC_API_KEY
 
 Without the secret, these buttons are hidden and import works as before. The model is set in `worker/ai.ts`. Each call logs its token usage (`npx wrangler tail`). Setting a monthly spend limit in the Anthropic Console is a good idea.
 
+## Deploying
+
+Cloudflare Workers Builds builds and deploys from GitHub. Nothing deploys from a laptop.
+
+- **Push to `main`:** production. Runs `npm run build`, then `npx wrangler deploy`, to https://scullery.nross11.workers.dev
+- **Push to any other branch:** preview. Runs `npm run build`, then `npx wrangler preview --name review`, to https://review-scullery.nross11.workers.dev. There is one shared preview address, so the latest push wins.
+- Previews use the production database and photo bucket. Anything saved on a preview is real data.
+- Migrations don't run on deploy. Apply them with `npm run db:migrate`.
+- The repo is public. Never commit personal data, secrets or `.dev.vars`.
+
+Every change goes through a pull request: the preview build shows as a check on the PR, someone tries the preview, and merging to `main` ships it.
+
 ## Development
 
 ```sh
