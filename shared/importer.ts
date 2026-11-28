@@ -218,11 +218,15 @@ export function importFromHtml(html: string, url: string, pastedText?: string | 
   body.description = kind === 'web' ? desc : null;
   body.rawText = [pastedText?.trim(), kind !== 'web' ? desc : null].filter(Boolean).join('\n\n') || null;
   const title = metaContent(html, 'og:title') ?? cleanText(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]) ?? '';
+  const firstLine = pastedText?.trim().split('\n')[0]?.trim();
+  const fallbackTitle =
+    (firstLine && firstLine.length <= 70 && !/^https?:/.test(firstLine) ? firstLine : null) ??
+    (kind !== 'web' && kind !== 'manual' ? `Recipe from ${kind[0].toUpperCase()}${kind.slice(1)}` : 'Untitled recipe');
   return {
     ok: true,
     structured: false,
     draft: {
-      title: title || 'Untitled recipe',
+      title: title || fallbackTitle,
       body,
       sourceUrl: url,
       sourceKind: kind,

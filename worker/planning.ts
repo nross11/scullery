@@ -141,6 +141,14 @@ shoppingRoutes.get('/', async (c) => {
   return c.json(results);
 });
 
+shoppingRoutes.post('/', async (c) => {
+  const { name } = await c.req.json<{ name?: string }>();
+  const lid = id();
+  await c.env.DB.prepare('INSERT INTO shopping_lists (id, household_id, name) VALUES (?, ?, ?)')
+    .bind(lid, c.get('user').household_id, name || 'Shopping list').run();
+  return c.json({ id: lid });
+});
+
 /** Generate a list from planned meals between two dates. */
 shoppingRoutes.post('/generate', async (c) => {
   const user = c.get('user');
