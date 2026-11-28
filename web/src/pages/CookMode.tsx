@@ -92,12 +92,12 @@ export default function CookMode({ recipe, factor, onClose }: { recipe: Recipe; 
       </div>
       <div className="progress" style={{ marginTop: 8 }}><div style={{ width: `${((i + 1) / steps.length) * 100}%` }} /></div>
       <div className="spread small muted" style={{ marginTop: 8 }}>
-        <span>Step {i + 1} of {steps.length}{step?.group ? ` · ${step.group}` : ''}</span>
+        <span className="step-count">Step {i + 1} of {steps.length}{step?.group ? ` · ${step.group}` : ''}</span>
         <span>{recipe.title}</span>
       </div>
       <div className="step-text" onClick={() => setI((x) => Math.min(steps.length - 1, x + 1))}>{step?.text}</div>
       {(stepTimer || timer) && (
-        <div className="row" style={{ justifyContent: 'center', marginBottom: 12 }}>
+        <div className={`row${timer ? ' timer' : ''}`} style={{ justifyContent: 'center', marginBottom: 12 }}>
           {timer ? (
             <>
               <strong style={{ fontSize: '1.6rem', fontVariantNumeric: 'tabular-nums' }}>

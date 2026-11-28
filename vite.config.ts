@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Scullery',
         short_name: 'Scullery',
         description: 'Our recipes, cook notes, meal plans and shopping lists.',
-        theme_color: '#4d6b46',
-        background_color: '#f7f1e6',
+        theme_color: '#14110f',
+        background_color: '#14110f',
         display: 'standalone',
         start_url: '/',
         icons: [
