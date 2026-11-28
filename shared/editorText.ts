@@ -1,54 +1,34 @@
 // Convert between the structured recipe body and the simple text format used in the editor.
 // Ingredients: one per line. Steps: one per line (blank lines ignored).
-// A line starting with "#" starts a new group, e.g. "# For the sauce".
+// Recipes are one flat list of each, so older group headings are dropped and "#" lines are skipped.
 
 import { parseIngredient } from './ingredients';
-import type { IngredientGroup, StepGroup } from './recipe';
+import { flatIngredients, flatSteps, type IngredientGroup, type StepGroup } from './recipe';
 
 export function ingredientsToText(groups: IngredientGroup[]): string {
-  return groups
-    .map((g) => [g.title ? `# ${g.title}` : null, ...g.items.map((i) => i.text)].filter((l) => l !== null).join('\n'))
-    .filter(Boolean)
-    .join('\n\n');
+  return flatIngredients(groups)[0].items.map((i) => i.text).join('\n');
 }
 
 export function textToIngredients(text: string): IngredientGroup[] {
-  const groups: IngredientGroup[] = [{ title: null, items: [] }];
-  for (const raw of text.split('\n')) {
-    const line = raw.trim();
-    if (!line) continue;
-    if (line.startsWith('#')) {
-      const title = line.replace(/^#+\s*/, '').trim();
-      if (groups.length === 1 && !groups[0].items.length && !groups[0].title) groups[0].title = title;
-      else groups.push({ title, items: [] });
-      continue;
-    }
-    groups[groups.length - 1].items.push(parseIngredient(line));
-  }
-  return groups;
+  const items = text
+    .split('\n')
+    .map((l) => l.trim().replace(/^[-•*▢]\s+/, ''))
+    .filter((l) => l && !l.startsWith('#'))
+    .map(parseIngredient);
+  return [{ title: null, items }];
 }
 
 export function stepsToText(groups: StepGroup[]): string {
-  return groups
-    .map((g) => [g.title ? `# ${g.title}` : null, ...g.steps].filter((l) => l !== null).join('\n'))
-    .filter(Boolean)
-    .join('\n\n');
+  return flatSteps(groups)[0].steps.join('\n');
 }
 
 export function textToSteps(text: string): StepGroup[] {
-  const groups: StepGroup[] = [{ title: null, steps: [] }];
-  for (const raw of text.split('\n')) {
-    const line = raw.trim().replace(/^(step\s*)?\d+[.):]\s+/i, '');
-    if (!line) continue;
-    if (raw.trim().startsWith('#')) {
-      const title = raw.trim().replace(/^#+\s*/, '');
-      if (groups.length === 1 && !groups[0].steps.length && !groups[0].title) groups[0].title = title;
-      else groups.push({ title, steps: [] });
-      continue;
-    }
-    groups[groups.length - 1].steps.push(line);
-  }
-  return groups;
+  const steps = text
+    .split('\n')
+    .filter((raw) => !raw.trim().startsWith('#'))
+    .map((raw) => raw.trim().replace(/^(step\s*)?\d+[.):]\s+/i, ''))
+    .filter(Boolean);
+  return [{ title: null, steps }];
 }
 
 /** Line-based diff (LCS) for showing what changed between versions. */

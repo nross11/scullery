@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, type CookLog, type Recipe } from '../api';
 import { Sheet, Spinner, StarInput, Stars, isoDate, minutes, prettyDate, toast, useLoad } from '../components/ui';
 import { scaleIngredient } from '../../../shared/ingredients';
+import { flatIngredients, flatSteps } from '../../../shared/recipe';
 import CookMode from './CookMode';
 import { ChatSheet, HealthierSheet } from './RecipeAi';
 import { useMe } from '../App';
@@ -111,33 +112,23 @@ export default function RecipeView({ cookMode = false }: { cookMode?: boolean })
               <h2 style={{ margin: 0 }}>Ingredients</h2>
               <Scaler servings={servings} setServings={setServings} base={b.servings} label={b.servingsLabel} />
             </div>
-            {b.ingredients.map((g, gi) => (
-              <div key={gi}>
-                {g.title && <div className="group-title">{g.title}</div>}
-                <ul>
-                  {g.items.map((ing, ii) => {
-                    const key = `${gi}-${ii}`;
-                    return (
-                      <li key={key} className={checked.has(key) ? 'checked' : ''} onClick={() => toggle(key)}>
-                        <span className="tick">{checked.has(key) ? '✓' : ''}</span>
-                        <span>{scaleIngredient(ing, factor)}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
+            <ul>
+              {flatIngredients(b.ingredients)[0].items.map((ing, ii) => {
+                const key = String(ii);
+                return (
+                  <li key={key} className={checked.has(key) ? 'checked' : ''} onClick={() => toggle(key)}>
+                    <span className="tick">{checked.has(key) ? '✓' : ''}</span>
+                    <span>{scaleIngredient(ing, factor)}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
         {hasSteps && (
           <section className="steps">
             <h2>Method</h2>
-            {b.steps.map((g, gi) => (
-              <div key={gi}>
-                {g.title && <div className="group-title">{g.title}</div>}
-                <ol>{g.steps.map((s, si) => <li key={si}>{s}</li>)}</ol>
-              </div>
-            ))}
+            <ol>{flatSteps(b.steps)[0].steps.map((s, si) => <li key={si}>{s}</li>)}</ol>
           </section>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Recipe } from '../api';
 import { scaleIngredient } from '../../../shared/ingredients';
+import { flatIngredients } from '../../../shared/recipe';
 import { Sheet } from '../components/ui';
 
 /** Keep the screen on while cooking. Uses the Wake Lock API (Safari on iOS 16.4+ supports it). */
@@ -42,7 +43,7 @@ function findTimer(step: string): number | null {
 
 export default function CookMode({ recipe, factor, onClose }: { recipe: Recipe; factor: number; onClose: () => void }) {
   const steps = useMemo(
-    () => recipe.body.steps.flatMap((g) => g.steps.map((s) => ({ group: g.title, text: s }))),
+    () => recipe.body.steps.flatMap((g) => g.steps.map((s) => ({ text: s }))),
     [recipe],
   );
   const [i, setI] = useState(0);
@@ -92,7 +93,7 @@ export default function CookMode({ recipe, factor, onClose }: { recipe: Recipe; 
       </div>
       <div className="progress" style={{ marginTop: 8 }}><div style={{ width: `${((i + 1) / steps.length) * 100}%` }} /></div>
       <div className="spread small muted" style={{ marginTop: 8 }}>
-        <span>Step {i + 1} of {steps.length}{step?.group ? ` · ${step.group}` : ''}</span>
+        <span>Step {i + 1} of {steps.length}</span>
         <span>{recipe.title}</span>
       </div>
       <div className="step-text" onClick={() => setI((x) => Math.min(steps.length - 1, x + 1))}>{step?.text}</div>
@@ -116,12 +117,9 @@ export default function CookMode({ recipe, factor, onClose }: { recipe: Recipe; 
       </div>
       {showIng && (
         <Sheet title="Ingredients" onClose={() => setShowIng(false)}>
-          {recipe.body.ingredients.map((g, gi) => (
-            <div key={gi} className="ingredients">
-              {g.title && <div className="group-title">{g.title}</div>}
-              <ul>{g.items.map((ing, ii) => <li key={ii} style={{ cursor: 'default', fontSize: '1.1rem' }}>{scaleIngredient(ing, factor)}</li>)}</ul>
-            </div>
-          ))}
+          <div className="ingredients">
+            <ul>{flatIngredients(recipe.body.ingredients)[0].items.map((ing, ii) => <li key={ii} style={{ cursor: 'default', fontSize: '1.1rem' }}>{scaleIngredient(ing, factor)}</li>)}</ul>
+          </div>
         </Sheet>
       )}
     </div>

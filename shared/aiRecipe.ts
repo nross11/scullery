@@ -16,36 +16,21 @@ const recipeProps = {
   prepMinutes: nullable('integer'),
   cookMinutes: nullable('integer'),
   totalMinutes: nullable('integer'),
-  ingredientGroups: {
+  ingredients: {
     type: 'array',
-    description: 'Ingredient groups. Use a single group with title null unless the recipe has sections.',
-    items: {
-      type: 'object',
-      properties: {
-        title: { ...nullable('string'), description: 'Section name like "For the sauce", or null.' },
-        items: { type: 'array', items: { type: 'string' }, description: 'One ingredient per line, quantity first, e.g. "2 tbsp olive oil" or "400 g tin chopped tomatoes".' },
-      },
-      required: ['title', 'items'],
-      additionalProperties: false,
-    },
+    items: { type: 'string' },
+    description:
+      'One flat list, one ingredient per line, no section headings. Start each line with its amount exactly as the source gives it, e.g. "2 tbsp olive oil" or "400 g tin chopped tomatoes". If the source gives no amount, write the ingredient as the source does (e.g. "Olive oil" or "Salt, to taste") and never invent a number.',
   },
-  stepGroups: {
+  steps: {
     type: 'array',
-    description: 'Method steps. Use a single group with title null unless the recipe has sections.',
-    items: {
-      type: 'object',
-      properties: {
-        title: nullable('string'),
-        steps: { type: 'array', items: { type: 'string' }, description: 'One clear instruction per step, no step numbers.' },
-      },
-      required: ['title', 'steps'],
-      additionalProperties: false,
-    },
+    items: { type: 'string' },
+    description: 'One flat list of method steps in cooking order, one clear instruction per step, no step numbers and no section headings.',
   },
   notes: { ...nullable('string'), description: 'Useful tips, storage or variations from the source, or null.' },
 } as const;
 
-const recipeRequired = ['title', 'description', 'servings', 'servingsLabel', 'prepMinutes', 'cookMinutes', 'totalMinutes', 'ingredientGroups', 'stepGroups', 'notes'];
+const recipeRequired = ['title', 'description', 'servings', 'servingsLabel', 'prepMinutes', 'cookMinutes', 'totalMinutes', 'ingredients', 'steps', 'notes'];
 
 export const IMPORT_SCHEMA = {
   type: 'object',
@@ -92,8 +77,8 @@ export interface AiRecipeFields {
   prepMinutes: number | null;
   cookMinutes: number | null;
   totalMinutes: number | null;
-  ingredientGroups: { title: string | null; items: string[] }[];
-  stepGroups: { title: string | null; steps: string[] }[];
+  ingredients: string[];
+  steps: string[];
   notes: string | null;
 }
 
@@ -122,14 +107,8 @@ export function bodyFromAi(a: AiRecipeFields, base?: RecipeBody): RecipeBody {
   body.prepMinutes = posInt(a.prepMinutes);
   body.cookMinutes = posInt(a.cookMinutes);
   body.totalMinutes = posInt(a.totalMinutes);
-  const ings = (a.ingredientGroups ?? [])
-    .map((g) => ({ title: str(g.title), items: (g.items ?? []).map((t) => String(t).trim()).filter(Boolean).map(parseIngredient) }))
-    .filter((g) => g.items.length);
-  body.ingredients = ings.length ? ings : [{ title: null, items: [] }];
-  const steps = (a.stepGroups ?? [])
-    .map((g) => ({ title: str(g.title), steps: (g.steps ?? []).map((s) => String(s).replace(/^\s*(step\s*)?\d+[.):]\s*/i, '').trim()).filter(Boolean) }))
-    .filter((g) => g.steps.length);
-  body.steps = steps.length ? steps : [{ title: null, steps: [] }];
+  body.ingredients = [{ title: null, items: (a.ingredients ?? []).map((t) => String(t).trim()).filter(Boolean).map(parseIngredient) }];
+  body.steps = [{ title: null, steps: (a.steps ?? []).map((s) => String(s).replace(/^\s*(step\s*)?\d+[.):]\s*/i, '').trim()).filter(Boolean) }];
   body.notes = str(a.notes);
   return body;
 }
