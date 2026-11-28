@@ -46,6 +46,8 @@ export const api = {
 export interface Me {
   id: string; email: string; name: string | null; avatar_url: string | null; household_id: string;
   members: { name: string | null; email: string; avatar_url: string | null }[];
+  /** Claude features are switched on */
+  ai?: boolean;
 }
 
 export interface RecipeSummary {
@@ -63,7 +65,25 @@ export interface Recipe {
   imageUrl: string | null; tags: string[]; cookLogs: CookLog[]; createdAt: string; updatedAt: string;
 }
 
-export interface ImportResponse { structured: boolean; fetched: boolean; draft: RecipeDraft }
+export interface ImportResponse { structured: boolean; fetched: boolean; draft: RecipeDraft; ai?: boolean; guessed?: string[]; aiNote?: string }
+
+export interface ImageInput { mediaType: 'image/jpeg'; data: string }
+
+/** Shrink a photo/screenshot to a JPEG Claude can read (long edge 1568px), as base64. */
+export async function imageForClaude(file: File): Promise<ImageInput> {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1568 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  const url = canvas.toDataURL('image/jpeg', 0.85);
+  return { mediaType: 'image/jpeg', data: url.slice(url.indexOf(',') + 1) };
+}
+
+export interface HealthierProposal {
+  basedOnVersion: number; title: string; body: RecipeBody; summary: string; changes: { change: string; why: string }[];
+}
 
 export interface PlanEntry {
   id: string; plan_date: string; meal: string; recipe_id: string | null; note: string | null; servings: number | null;

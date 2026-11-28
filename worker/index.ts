@@ -4,6 +4,7 @@ import { authRoutes, createApiToken, requireUser } from './auth';
 import { createRecipe, importUrl, recipeRoutes } from './recipes';
 import { cookLogRoutes, planRoutes, shoppingRoutes } from './planning';
 import { id } from './util';
+import { aiEnabled, type ImageInput } from './ai';
 
 const app = new Hono<AppEnv>().basePath('/api');
 
@@ -17,7 +18,7 @@ app.use('/*', async (c, next) => {
 app.get('/me', async (c) => {
   const user = c.get('user');
   const { results: members } = await c.env.DB.prepare('SELECT name, email, avatar_url FROM users WHERE household_id = ?').bind(user.household_id).all();
-  return c.json({ ...user, members });
+  return c.json({ ...user, members, ai: aiEnabled(c.env) });
 });
 
 // Personal tokens for the iOS Shortcut.
@@ -42,16 +43,29 @@ app.delete('/tokens/:prefix', async (c) => {
 app.post('/share', async (c) => {
   const ct = c.req.header('content-type') || '';
   let url: string | null = null;
-  let text: string | null = null;
+  const texts: string[] = [];
+  const images: ImageInput[] = [];
   if (ct.includes('application/json')) {
-    const b = await c.req.json<{ url?: string; text?: string }>();
+    const b = await c.req.json<{ url?: string; text?: string; input?: string }>();
     url = b.url ?? null;
-    text = b.text ?? null;
+    for (const t of [b.text, b.input]) if (typeof t === 'string' && t.trim()) texts.push(t);
   } else {
-    const f = await c.req.parseBody();
-    url = (f.url as string) || null;
-    text = (f.text as string) || null;
+    // The Shortcut sends a form. Fields can be text, or files when a screenshot is shared.
+    const f = await c.req.parseBody({ all: true });
+    for (const [key, raw] of Object.entries(f)) {
+      for (const v of Array.isArray(raw) ? raw : [raw]) {
+        if (typeof v === 'string') {
+          if (key === 'url' && v.trim()) url = v.trim();
+          else if (v.trim()) texts.push(v);
+        } else if (v && typeof v === 'object' && 'arrayBuffer' in v) {
+          const img = await fileToImage(v as File);
+          if ('error' in img) return c.json({ error: img.error, message: img.error }, 400);
+          if (images.length < 6) images.push(img);
+        }
+      }
+    }
   }
+  let text: string | null = texts.join('\n\n').trim() || null;
   // The share sheet often hands over text with a URL inside it.
   if (!url && text) {
     const m = text.match(/https?:\/\/\S+/);
@@ -60,12 +74,34 @@ app.post('/share', async (c) => {
       text = text.replace(m[0], '').trim() || null;
     }
   }
-  if (!url && !text) return c.json({ error: 'nothing shared' }, 400);
-  const result = await importUrl(url, text);
+  if (!url && !text && !images.length) return c.json({ error: 'nothing shared', message: 'Nothing came through to save.' }, 400);
+  const result = await importUrl(c.env, url, text, images);
   const rid = await createRecipe(c.env, c.get('user'), { ...result.draft, tags: result.draft.tags ?? [] } as any);
-  const link = new URL(`/recipes/${rid}${result.structured ? '' : '?tidy=1'}`, c.req.url).toString();
-  return c.json({ id: rid, url: link, structured: result.structured, title: result.draft.title });
+  const link = new URL(result.structured ? `/recipes/${rid}` : `/recipes/${rid}/edit?${result.ai ? 'ai=1' : 'tidy=1'}`, c.req.url).toString();
+  const message = result.structured || result.ai
+    ? `Saved "${result.draft.title}" to Scullery.`
+    : `Saved a draft to Scullery, but ${result.aiNote ? result.aiNote.replace(/\.$/, '').toLowerCase() : "I couldn't read the recipe"}. Open it to tidy up, or share a screenshot.`;
+  return c.json({ id: rid, url: link, structured: result.structured, ai: !!result.ai, title: result.draft.title, message });
 });
+
+async function fileToImage(file: File): Promise<ImageInput | { error: string }> {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const type = sniffImage(buf);
+  if (!type) return { error: "That file isn't a photo I can read. Try a screenshot." };
+  // Claude takes images up to 5 MB once base64-encoded.
+  if (buf.byteLength > 3_700_000) return { error: 'That image is too large. Try a normal screenshot.' };
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  return { mediaType: type, data: btoa(bin) };
+}
+
+function sniffImage(b: Uint8Array): ImageInput['mediaType'] | null {
+  if (b[0] === 0xff && b[1] === 0xd8) return 'image/jpeg';
+  if (b[0] === 0x89 && b[1] === 0x50) return 'image/png';
+  if (b[0] === 0x47 && b[1] === 0x49) return 'image/gif';
+  if (b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  return null;
+}
 
 // Photos stored in R2, served back through the Worker.
 app.post('/photos', async (c) => {

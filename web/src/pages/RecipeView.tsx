@@ -4,6 +4,8 @@ import { api, type CookLog, type Recipe } from '../api';
 import { Sheet, Spinner, StarInput, Stars, isoDate, minutes, prettyDate, toast, useLoad } from '../components/ui';
 import { scaleIngredient } from '../../../shared/ingredients';
 import CookMode from './CookMode';
+import { ChatSheet, HealthierSheet } from './RecipeAi';
+import { useMe } from '../App';
 
 export function useScale(base: number | null, initial?: number | null) {
   const [servings, setServings] = useState<number | null>(initial ?? base);
@@ -35,6 +37,8 @@ export default function RecipeView({ cookMode = false }: { cookMode?: boolean })
   const [logSheet, setLogSheet] = useState<CookLog | 'new' | null>(null);
   const [historyFor, setHistoryFor] = useState<CookLog | null>(null);
   const [planSheet, setPlanSheet] = useState(false);
+  const [aiSheet, setAiSheet] = useState<'healthier' | 'chat' | null>(null);
+  const ai = !!useMe()?.ai;
 
   const totalTime = useMemo(() => {
     if (!r) return null;
@@ -89,6 +93,8 @@ export default function RecipeView({ cookMode = false }: { cookMode?: boolean })
         {hasSteps && <Link to={`/recipes/${r.id}/cook${servings && servings !== b.servings ? `?servings=${servings}` : ''}`} className="btn btn-primary">Start cooking</Link>}
         <button onClick={() => setLogSheet('new')}>Log a cook</button>
         <button onClick={() => setPlanSheet(true)}>Add to plan</button>
+        {ai && <button onClick={() => setAiSheet('chat')}>Ask Claude</button>}
+        {ai && hasIngredients && <button onClick={() => setAiSheet('healthier')}>Make it healthier</button>}
       </div>
 
       {b.rawText && !hasIngredients && (
@@ -185,6 +191,8 @@ export default function RecipeView({ cookMode = false }: { cookMode?: boolean })
 
       {logSheet && <CookLogSheet recipeId={r.id} log={logSheet === 'new' ? null : logSheet} onClose={() => setLogSheet(null)} onSaved={() => { setLogSheet(null); reload(); }} />}
       {historyFor && <LogHistorySheet log={historyFor} onClose={() => setHistoryFor(null)} onRestored={() => { setHistoryFor(null); reload(); }} />}
+      {aiSheet === 'chat' && <ChatSheet recipe={r} onClose={() => setAiSheet(null)} />}
+      {aiSheet === 'healthier' && <HealthierSheet recipe={r} onClose={() => setAiSheet(null)} onSaved={() => { setAiSheet(null); reload(); }} />}
       {planSheet && <AddToPlanSheet recipe={r} servings={servings} onClose={() => setPlanSheet(false)} />}
     </>
   );

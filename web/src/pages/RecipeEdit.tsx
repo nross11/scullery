@@ -15,6 +15,10 @@ export default function RecipeEdit() {
   const [params] = useSearchParams();
   const nav = useNavigate();
   const tidy = params.get('tidy') === '1';
+  const aiDraft = params.get('ai') === '1';
+  const [guessed] = useState<string[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem(`guessed:${id}`) ?? '[]'); } catch { return []; }
+  });
   const fromLog = params.get('fromLog');
   const { data: r } = useLoad(() => api.get<Recipe>(`/recipes/${id}`), [id]);
   const [f, setF] = useState<Record<string, string> | null>(null);
@@ -98,7 +102,20 @@ export default function RecipeEdit() {
         <Link to={`/recipes/${r.id}`} className="btn ghost small">Cancel</Link>
         <button className="primary small" disabled={busy} onClick={save}>Save</button>
       </div>
-      <h1>{tidy ? 'Tidy up recipe' : 'Edit recipe'}</h1>
+      <h1>{aiDraft ? 'Check the recipe' : tidy ? 'Tidy up recipe' : 'Edit recipe'}</h1>
+
+      {aiDraft && (
+        <div className="card" style={{ marginBottom: 16, borderColor: 'var(--green)' }}>
+          <strong>Claude wrote this from the source</strong>
+          <p className="hint">Give it a quick read and fix anything that looks off, then Save. It's already in your recipes.</p>
+          {!!guessed.length && (
+            <>
+              <p className="small" style={{ margin: '8px 0 2px' }}><strong>Estimated, not in the source:</strong></p>
+              <ul className="small" style={{ margin: 0, paddingLeft: 20 }}>{guessed.map((g, i) => <li key={i}>{g}</li>)}</ul>
+            </>
+          )}
+        </div>
+      )}
 
       {log && (
         <div className="card" style={{ marginBottom: 16, borderColor: 'var(--terracotta)' }}>
@@ -110,7 +127,7 @@ export default function RecipeEdit() {
         </div>
       )}
 
-      {(tidy || f.rawText) && f.rawText && (
+      {!aiDraft && (tidy || f.rawText) && f.rawText && (
         <div className="card" style={{ marginBottom: 16 }}>
           <strong>Pasted caption</strong>
           <p className="hint">Copy the bits you need into the fields below. I've had a first go at splitting it.</p>
