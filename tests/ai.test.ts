@@ -9,15 +9,18 @@ const fields: AiRecipeFields = {
   prepMinutes: 10,
   cookMinutes: 20,
   totalMinutes: null,
-  ingredientGroups: [{ title: null, items: ['400 g penne', '200 ml double cream', ''] }],
-  stepGroups: [{ title: null, steps: ['1. Boil the pasta.', 'Step 2: Stir in the cream.'] }],
+  ingredients: ['400 g penne', '200 ml double cream', '', 'Salt, to taste'],
+  steps: ['1. Boil the pasta.', 'Step 2: Stir in the cream.'],
   notes: null,
 };
 
 describe('bodyFromAi', () => {
   it('parses ingredients and strips step numbers', () => {
     const b = bodyFromAi(fields);
-    expect(b.ingredients[0].items).toHaveLength(2);
+    expect(b.ingredients).toHaveLength(1);
+    expect(b.ingredients[0].title).toBeNull();
+    expect(b.ingredients[0].items).toHaveLength(3);
+    expect(b.ingredients[0].items[2].text).toBe('Salt, to taste');
     expect(b.ingredients[0].items[0]).toMatchObject({ quantity: 400, unit: 'g', name: 'penne' });
     expect(b.steps[0].steps).toEqual(['Boil the pasta.', 'Stir in the cream.']);
     expect(b.servings).toBe(4);

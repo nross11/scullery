@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { parseIngredient, scaleIngredient, formatQuantity } from '../shared/ingredients';
 import { importFromHtml, parseDuration, roughSplitText } from '../shared/importer';
 import { buildShoppingList, guessAisle } from '../shared/shopping';
+import { ingredientsToText, stepsToText, textToIngredients, textToSteps } from '../shared/editorText';
+import { flatIngredients } from '../shared/recipe';
 
 describe('parseIngredient', () => {
   it('handles mixed fractions and units', () => {
@@ -35,7 +37,7 @@ describe('importer', () => {
     expect(r.draft.title).toBe('Best Pancakes & Syrup');
     expect(r.draft.body.servings).toBe(4);
     expect(r.draft.body.cookMinutes).toBe(65);
-    expect(r.draft.body.steps).toEqual([{ title: 'Batter', steps: ['Mix.'] }, { title: null, steps: ['Fry.'] }]);
+    expect(r.draft.body.steps).toEqual([{ title: null, steps: ['Mix.', 'Fry.'] }]);
     expect(r.draft.imageUrl).toBe('https://x/img.jpg');
     expect(r.draft.tags).toEqual(['breakfast']);
   });
@@ -81,5 +83,23 @@ describe('fixes', () => {
     expect(guessAisle('vegetable stock')).toBe('Pantry');
     expect(importFromHtml('', 'https://www.tiktok.com/@x/video/1').draft.title).toBe('Recipe from Tiktok');
     expect(importFromHtml('', 'https://www.tiktok.com/@x/video/1', 'Crispy gnocchi\n1 bag gnocchi').draft.title).toBe('Crispy gnocchi');
+  });
+});
+
+describe('flat recipe lists', () => {
+  const grouped = [
+    { title: null, items: [parseIngredient('3 large leeks')] },
+    { title: 'From the pantry', items: [parseIngredient('2 onions'), parseIngredient('Olive oil')] },
+  ];
+  it('merges older ingredient groups in order and drops headings', () => {
+    expect(ingredientsToText(grouped)).toBe('3 large leeks\n2 onions\nOlive oil');
+    expect(flatIngredients(grouped)).toEqual([{ title: null, items: grouped.flatMap((g) => g.items) }]);
+  });
+  it('reads the editor text as one list, skipping heading lines and bullets', () => {
+    const g = textToIngredients('- 3 large leeks\n# From the pantry\n2 onions\nOlive oil');
+    expect(g).toHaveLength(1);
+    expect(g[0].items.map((i) => i.text)).toEqual(['3 large leeks', '2 onions', 'Olive oil']);
+    expect(textToSteps('# Sauce\n1. Fry.\n\nStep 2: Serve.')).toEqual([{ title: null, steps: ['Fry.', 'Serve.'] }]);
+    expect(stepsToText([{ title: 'A', steps: ['One'] }, { title: 'B', steps: ['Two'] }])).toBe('One\nTwo');
   });
 });

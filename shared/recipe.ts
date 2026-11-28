@@ -74,3 +74,15 @@ export function sourceKindOf(url: string | null | undefined): SourceKind {
   if (host.endsWith('tiktok.com')) return 'tiktok';
   return 'web';
 }
+
+/**
+ * Scullery shows every recipe as one bulleted ingredient list and one numbered step list.
+ * Older recipes may still have groups ("For the sauce"); these merge them, keeping the order.
+ */
+export function flatIngredients(groups: IngredientGroup[] | null | undefined): IngredientGroup[] {
+  return [{ title: null, items: (groups ?? []).flatMap((g) => g.items ?? []) }];
+}
+
+export function flatSteps(groups: StepGroup[] | null | undefined): StepGroup[] {
+  return [{ title: null, steps: (groups ?? []).flatMap((g) => g.steps ?? []) }];
+}

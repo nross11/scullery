@@ -2,7 +2,7 @@
 // Pure functions: the Worker fetches the HTML and passes it in.
 
 import { parseIngredient } from './ingredients';
-import { emptyBody, sourceKindOf, type RecipeDraft, type StepGroup } from './recipe';
+import { emptyBody, flatSteps, sourceKindOf, type RecipeDraft, type StepGroup } from './recipe';
 
 type Json = any; // schema.org data is loosely shaped
 
@@ -178,7 +178,7 @@ export function draftFromSchema(r: Json, url: string): RecipeDraft {
   const ings: string[] = [].concat(r.recipeIngredient ?? r.ingredients ?? []).map(cleanText).filter(Boolean);
   body.ingredients = [{ title: null, items: ings.map(parseIngredient) }];
   const steps = parseInstructions(r.recipeInstructions);
-  if (steps.length) body.steps = steps;
+  if (steps.length) body.steps = flatSteps(steps);
   return {
     title: cleanText(r.name) || 'Untitled recipe',
     body,

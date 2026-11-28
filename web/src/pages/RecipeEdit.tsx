@@ -148,7 +148,7 @@ export default function RecipeEdit() {
       </div>
       <div className="field">
         <label>Ingredients</label>
-        <textarea style={{ minHeight: 200 }} value={f.ingredients} onChange={set('ingredients')} placeholder={'2 cups flour\n1 tsp salt\n# For the sauce\n400g tinned tomatoes'} />
+        <textarea style={{ minHeight: 200 }} value={f.ingredients} onChange={set('ingredients')} placeholder={'2 cups flour\n1 tsp salt\n400g tinned tomatoes'} />
         <p className="hint">One per line. Start a line with # to make a section, like "# For the sauce".</p>
       </div>
       <div className="field">
